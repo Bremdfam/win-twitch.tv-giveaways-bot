@@ -8,3 +8,4 @@ A chatbot for Twitch.tv that automates winning giveaways
 - stop typing in chat for that channel for 30 minutes unless my name has been said
 - read chat for my username
 - print a msg when any msg that contains my name has been said after a minute of my msg being printed (otherwise a bot might @ me to say I've entered rather than won)
+- ping the user to let them know they have won/entered the giveaway

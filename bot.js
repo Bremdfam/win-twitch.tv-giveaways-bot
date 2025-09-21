@@ -4,6 +4,7 @@ const tmi = require('tmi.js');
 const player = require('play-sound')({ players: ['powershell'] });
 const path = require('path');
 const soundPath = path.resolve(__dirname, 'button-10.wav');
+const soundPathDisconnect = path.resolve(__dirname, 'phone-disconnect-1.wav');
 
 const channels = process.env.CHANNELS.split(',');
 
@@ -21,22 +22,20 @@ client.connect();
 const message_list = [] // Array of messages from ALL chats
 let lastBotMessageTime = 0; // Timestamp of last bot message
 const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
-let same_message_count = 0
 
 client.on('message', (channel, tags, message, self) => {
-    if (self || tags['user-type'] === 'bot' || tags.mod || tags.badges?.vip) return; // Filters out bots, mods, and my own messages
+    if (self || tags['user-type'] === 'bot' || tags.mod || tags.badges?.vip) return; // Filters out bots, mods, vips, and my own messages
 
     message_list.push(message)
     const last_message = message_list[message_list.length - 1]
 
     console.log(message_list)
     console.log(last_message)
-    console.log(same_message_count)
 
     if (message_list.length > 10) { message_list.shift(); } // Remove oldest message
 
 
-    if (message_list.length >= 3) {
+    if (message_list.length >= 5) {
         const lastFive = message_list.slice(-3); // Get the 5 last messages
         const allSame = lastFive.every(msg => msg === last_message); // Check if the last message is the same as the previous five
         const now = Date.now();
@@ -44,8 +43,7 @@ client.on('message', (channel, tags, message, self) => {
 
 
         if (allSame) { //&& !onCooldown
-            const logEntry = `[${new Date(now).toISOString()}] [${channel}] ${message}\n`;
-            same_message_count = same_message_count + 1
+            const logEntry = `[${new Date(now).toLocaleString()}] [${channel}] ${message}\n`;
 
             fs.appendFile('message.txt', logEntry, (err) => {
                 if (err) throw err;
@@ -62,10 +60,51 @@ client.on('message', (channel, tags, message, self) => {
         } else if (onCooldown) {
             console.log("On Cool down")
         } else {
-            console.log("Msg is not the same")
+            console.log("Last 5 msgs are not the same")
         }
     }
 
-
-
 });
+
+// Check if streamer is live
+const fetch = require('node-fetch');
+
+async function isStreamerLive(username) {
+    try {
+        const response = await fetch(`https://api.twitch.tv/helix/streams?user_login=${username}`, {
+            headers: {
+                'Client-ID': process.env.TWITCH_CLIENT_ID,
+                'Authorization': `Bearer ${process.env.TWITCH_OAUTH_TOKEN.replace("oauth:", "")}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!data || !data.data) {
+            console.error('Unexpected API response:', data);
+            return false;
+        }
+
+        return data.data.length > 0; // true if live, false if offline
+    } catch (error) {
+        console.error('Error checking stream status:', error);
+        return false;
+    }
+}
+
+// Monitor stream status
+setInterval(async () => {
+    const username = process.env.CHANNELS;
+    const live = await isStreamerLive(username);
+
+    if (live) {
+        console.log(`${username} is LIVE!`);
+    } else {
+        console.log(`${username} is offline.`);
+        client.disconnect(); // disconnect client from streamer
+        player.play(soundPathDisconnect, (err) => {
+            if (err) console.error('Error playing sound:', err);
+        }); // play sound
+        process.exit(0); // end program
+    }
+}, 10000); // Check every 10 seconds

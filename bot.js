@@ -1,16 +1,20 @@
-require('dotenv').config();
-const fs = require('fs');
-const tmi = require('tmi.js');
-const player = require('play-sound')({ players: ['powershell'] });
-const path = require('path');
-const fetch = require('node-fetch');
+require('dotenv').config(); // Load env variables
 
+const fs = require('fs'); // Write to txt files
+const tmi = require('tmi.js'); // Twitch Messaging Interface
+const player = require('play-sound')({ players: ['powershell'] }); // Plays sound effects on windows
+const path = require('path'); // Resolves paths
+const fetch = require('node-fetch'); // Makes HTTP requests
+
+// Paths to sound files
 const soundPath = path.resolve(__dirname, 'sounds/button-10.wav');
 const soundPathDisconnect = path.resolve(__dirname, 'sounds/phone-disconnect-1.wav');
 const soundPathNameMentioned = path.resolve(__dirname, 'sounds/machine-gun-02.wav');
 
+// List of channels to track from the .env file
 const channels = process.env.CHANNELS.split(',');
 
+// Create Twitch client
 const client = new tmi.Client({
     options: { debug: true },
     identity: {
@@ -20,43 +24,59 @@ const client = new tmi.Client({
     channels: channels
 });
 
-client.connect();
+client.connect(); // Connect to Twitch chat
 
-const messageMap = {}; // { channel: [messages] }
-const lastBotMessageTimeMap = {}; // { channel: timestamp }
-const COOLDOWN_MS = 30 * 60 * 1000;
+const messageMap = {}; // Stores messages per channel
+const lastBotMessageTimeMap = {}; // Tracks last bot message per channel
+const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 
-client.on('message', (channel, tags, message, self) => {
-    if (self || tags['user-type'] === 'bot' || tags.mod || tags.badges?.vip) return;
+// Event listener for incoming chat messages
+client.on('message', (channel, tags, message) => {
+    if (tags['user-type'] === 'bot' || tags.badges?.vip || message.toLowerCase().includes("raid")) return; // Filter out bot, VIP, or "raid" messages
 
+    // Detect if your username is mentioned
+    const usernameMentioned = message.toLowerCase().includes(process.env.TWITCH_USERNAME.toLowerCase());
+    if (usernameMentioned) {
+        // Log the mention to a channel specific txt file
+        fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, `\nUSERNAME MENTIONED AT https://www.twitch.tv/${channel.replace("#", "")} - ` + message, (err) => {
+            if (err) throw err;
+        });
+
+        // Play notification sound
+        player.play(soundPathNameMentioned, (err) => {
+            if (err) console.error('Error playing sound:', err);
+        });
+
+        // Send a message in chat
+        // client.say(channel, "Hello")
+    }
+
+    // Initialize message array for channel
     if (!messageMap[channel]) messageMap[channel] = [];
     const messages = messageMap[channel];
 
-    messages.push(message);
-    if (messages.length > 10) messages.shift();
+    // Add non-mod messages to message array
+    if (!tags.mod) {
+        messages.push(message);
+    }
 
-    // ✅ Log the current message array for this channel
-    console.log(`Messages for ${channel}:`, messages);
+    if (messages.length > 5) messages.shift(); // Remove any message older than the last 5 from the array
 
+    console.log(`Messages for ${channel}:`, messages); // Log the current message array for this channel
+
+    // Check if the last 5 messages are the same
     const lastMessage = messages[messages.length - 1];
-    const lastThree = messages.slice(-3);
-    const allSame = lastThree.every(msg => msg === lastMessage);
+    const lastFive = messages.slice(-3); // Change to track how many messages need to be the same
+    const allSame = lastFive.every(msg => msg === lastMessage);
 
+    // Track bot cooldown
     const now = Date.now();
     const lastTime = lastBotMessageTimeMap[channel] || 0;
     const onCooldown = now - lastTime < COOLDOWN_MS;
 
-    // ✅ Detect if your username is mentioned
-    const usernameMentioned = message.toLowerCase().includes(process.env.TWITCH_USERNAME.toLowerCase());
-    if (usernameMentioned) {
-        console.log(`[${channel}] Your username was mentioned: "${message}"`);
-        player.play(soundPathNameMentioned, (err) => {
-            if (err) console.error('Error playing sound:', err);
-        });
-    }
-
-    if (messages.length >= 3 && allSame && !onCooldown) {
-        const logEntry = `[${new Date(now).toLocaleString()}] [${channel}] ${message}\n`;
+    // If a message is reapeated 5 times, log it and play a notification
+    if (messages.length >= 5 && allSame && !onCooldown) {
+        const logEntry = `[${new Date(now).toLocaleString()}] https://www.twitch.tv/${channel.replace("#", "")} - ${message}\n`;
 
         fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, logEntry, (err) => {
             if (err) throw err;
@@ -66,7 +86,10 @@ client.on('message', (channel, tags, message, self) => {
             if (err) console.error('Error playing sound:', err);
         });
 
-        lastBotMessageTimeMap[channel] = now;
+        // Send the repeated message
+        //client.say(channel, message)
+
+        lastBotMessageTimeMap[channel] = now; // Update bot cooldown for channel
     } else if (onCooldown) {
         console.log(`[${channel}] On cooldown`);
     } else {
@@ -85,14 +108,14 @@ async function isStreamerLive(username) {
         });
 
         const data = await response.json();
-        return data?.data?.length > 0;
+        return data?.data?.length > 0; // Returns true if stream is live
     } catch (error) {
         console.error(`Error checking ${username} status:`, error);
         return false;
     }
 }
 
-// Monitor each stream
+// Check stream every minute to see if they're live. If not, log it and disconnect bot from chat
 setInterval(async () => {
     for (const username of channels.map(c => c.replace('#', ''))) {
         const live = await isStreamerLive(username);
@@ -101,11 +124,11 @@ setInterval(async () => {
         } else {
             fs.appendFile(`messages/${username}_messages.txt`, `${username} is offline`, (err) => {
                 if (err) throw err;
-            });
-            client.part(`#${username}`);
+            }); // Log offline status
+            client.part(`#${username}`); // Disconnect bot
             player.play(soundPathDisconnect, (err) => {
                 if (err) console.error('Error playing disconnect sound:', err);
-            });
+            }); // Play notification
         }
     }
-}, 30000);
+}, 60000);

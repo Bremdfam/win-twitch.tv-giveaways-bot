@@ -5,6 +5,7 @@ const tmi = require('tmi.js'); // Twitch Messaging Interface
 const player = require('play-sound')({ players: ['powershell'] }); // Plays sound effects on windows
 const path = require('path'); // Resolves paths
 const fetch = require('node-fetch'); // Makes HTTP requests
+const notifier = require('node-notifier') // Makes notifications
 
 // Paths to sound files
 const soundPath = path.resolve(__dirname, 'sounds/button-10.wav');
@@ -29,16 +30,26 @@ client.connect(); // Connect to Twitch chat
 const messageMap = {}; // Stores messages per channel
 const lastBotMessageTimeMap = {}; // Tracks last bot message per channel
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+const usernameDetectionCooldownMap = {}; // Tracks when username was detected
+const USERNAME_COOLDOWN_MS = 60 * 1000; // 1 minute
 
 // Event listener for incoming chat messages
 client.on('message', (channel, tags, message) => {
     if (tags['user-type'] === 'bot' || tags.badges?.vip || message.toLowerCase().includes("raid")) return; // Filter out bot, VIP, or "raid" messages
 
+    // Track bot cooldown
+    const now = Date.now();
+    const lastTime = lastBotMessageTimeMap[channel] || 0;
+    const onCooldown = now - lastTime < COOLDOWN_MS;
+
+    // Check if username detection is on cooldown for this channel
+    const usernameCooldownActive = usernameDetectionCooldownMap[channel] && (now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS);
+
     // Detect if your username is mentioned
     const usernameMentioned = message.toLowerCase().includes(process.env.TWITCH_USERNAME.toLowerCase());
-    if (usernameMentioned) {
+    if (usernameMentioned && !usernameCooldownActive) {
         // Log the mention to a channel specific txt file
-        fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, `\nUSERNAME MENTIONED AT https://www.twitch.tv/${channel.replace("#", "")} - ` + message, (err) => {
+        fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, `USERNAME MENTIONED AT https://www.twitch.tv/${channel.replace("#", "")} - ` + message + `\n`, (err) => {
             if (err) throw err;
         });
 
@@ -69,18 +80,20 @@ client.on('message', (channel, tags, message) => {
     const lastFive = messages.slice(-3); // Change to track how many messages need to be the same
     const allSame = lastFive.every(msg => msg === lastMessage);
 
-    // Track bot cooldown
-    const now = Date.now();
-    const lastTime = lastBotMessageTimeMap[channel] || 0;
-    const onCooldown = now - lastTime < COOLDOWN_MS;
-
     // If a message is reapeated 5 times, log it and play a notification
     if (messages.length >= 5 && allSame && !onCooldown) {
-        const logEntry = `[${new Date(now).toLocaleString()}] https://www.twitch.tv/${channel.replace("#", "")} - ${message}\n`;
+        const logEntry = `[${new Date(now).toLocaleString()}] https://www.twitch.tv/${channel.replace("#", "")} - MSG Repeated: ${message}\n`;
 
         fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, logEntry, (err) => {
             if (err) throw err;
         });
+
+        notifier.notify(
+            {
+                title: `Message repeated`,
+                message: `Message: ${message} has been said 5 times.`
+            }
+        )
 
         player.play(soundPath, (err) => {
             if (err) console.error('Error playing sound:', err);
@@ -90,6 +103,7 @@ client.on('message', (channel, tags, message) => {
         //client.say(channel, message)
 
         lastBotMessageTimeMap[channel] = now; // Update bot cooldown for channel
+        usernameDetectionCooldownMap[channel] = now; // Update username detection
     } else if (onCooldown) {
         console.log(`[${channel}] On cooldown`);
     } else {

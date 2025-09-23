@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^17.2.2",
+    "node-notifier": "^10.0.1",
     "play-sound": "^1.1.6",
     "tmi.js": "^1.8.5"
   }

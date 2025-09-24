@@ -5,12 +5,13 @@ const tmi = require('tmi.js'); // Twitch Messaging Interface
 const player = require('play-sound')({ players: ['powershell'] }); // Plays sound effects on windows
 const path = require('path'); // Resolves paths
 const fetch = require('node-fetch'); // Makes HTTP requests
-const notifier = require('node-notifier') // Makes notifications
+const notifier = require('node-notifier'); // Makes notifications
 
-// Paths to sound files
-const soundPath = path.resolve(__dirname, 'sounds/button-10.wav');
-const soundPathDisconnect = path.resolve(__dirname, 'sounds/phone-disconnect-1.wav');
-const soundPathNameMentioned = path.resolve(__dirname, 'sounds/machine-gun-02.wav');
+// Paths to sound files and logo
+const soundPath = path.join(__dirname, 'sounds/button-10.wav');
+const soundPathDisconnect = path.join(__dirname, 'sounds/phone-disconnect-1.wav');
+const soundPathNameMentioned = path.join(__dirname, 'sounds/machine-gun-02.wav');
+const iconPath = path.join(__dirname, 'logo.jpg')
 
 // List of channels to track from the .env file
 const channels = process.env.CHANNELS.split(',');
@@ -31,11 +32,12 @@ const messageMap = {}; // Stores messages per channel
 const lastBotMessageTimeMap = {}; // Tracks last bot message per channel
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 const usernameDetectionCooldownMap = {}; // Tracks when username was detected
-const USERNAME_COOLDOWN_MS = 60 * 1000; // 1 minute
+const USERNAME_COOLDOWN_MS = 30 * 1000; // 30 seconds
+const filter = ['raid', 'aimzHug', 'cahlaPrime'] // Filter out specific words
 
 // Event listener for incoming chat messages
 client.on('message', (channel, tags, message) => {
-    if (tags['user-type'] === 'bot' || tags.badges?.vip || message.toLowerCase().includes("raid")) return; // Filter out bot, VIP, or "raid" messages
+    if (tags['user-type'] === 'bot' || tags.badges?.vip || filter.some(word => message.toLowerCase().includes(word))) return; // Filter out bot, VIP, or filtered messages
 
     // Track bot cooldown
     const now = Date.now();
@@ -52,6 +54,19 @@ client.on('message', (channel, tags, message) => {
         fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, `USERNAME MENTIONED AT https://www.twitch.tv/${channel.replace("#", "")} - ` + message + `\n`, (err) => {
             if (err) throw err;
         });
+
+        notifier.notify(
+            {
+                title: `USERNAME DETECTED`,
+                message: `Channel: ${channel.replace("#", "")}\nMessage: ${message}`,
+                icon: iconPath,
+                wait: true,
+            }
+        )
+
+        notifier.once('click', () => {
+            require('child_process').exec(`start https://www.twitch.tv/${channel.replace('#', '')}`)
+        })
 
         // Play notification sound
         player.play(soundPathNameMentioned, (err) => {
@@ -91,9 +106,15 @@ client.on('message', (channel, tags, message) => {
         notifier.notify(
             {
                 title: `Message repeated`,
-                message: `Message: ${message} has been said 5 times.`
+                message: `Channel: ${channel.replace("#", "")}\nMessage: ${message} has been said 5 times.`,
+                icon: iconPath,
+                wait: true,
             }
         )
+
+        notifier.on('click', () => {
+            require('child_process').exec(`start https://www.twitch.tv/${channel.replace('#', '')}`)
+        })
 
         player.play(soundPath, (err) => {
             if (err) console.error('Error playing sound:', err);
@@ -145,4 +166,4 @@ setInterval(async () => {
             }); // Play notification
         }
     }
-}, 60000);
+}, 600000);

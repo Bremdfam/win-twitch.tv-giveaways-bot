@@ -1,15 +1,20 @@
-require('dotenv').config(); // Load env variables
+import 'dotenv/config'; // Load env variables
+import fs from 'fs'; // Write to txt files
+import tmi from 'tmi.js'; // Twitch Messaging Interface
+import playSound from 'play-sound'; // Sound player
+import path from 'path'; // Resolves paths
+import notifier from 'node-notifier'; // Makes notifications
+import streamMonitor from './streamMonitor.js';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
-const fs = require('fs'); // Write to txt files
-const tmi = require('tmi.js'); // Twitch Messaging Interface
-const player = require('play-sound')({ players: ['powershell'] }); // Plays sound effects on windows
-const path = require('path'); // Resolves paths
-const fetch = require('node-fetch'); // Makes HTTP requests
-const notifier = require('node-notifier'); // Makes notifications
+const require = createRequire(import.meta.url);
+const player = playSound({ players: ['powershell'] }); // Configure sound player
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Paths to sound files and logo
 const soundPath = path.join(__dirname, 'sounds/button-10.wav');
-const soundPathDisconnect = path.join(__dirname, 'sounds/phone-disconnect-1.wav');
 const soundPathNameMentioned = path.join(__dirname, 'sounds/machine-gun-02.wav');
 const iconPath = path.join(__dirname, 'logo.jpg')
 
@@ -44,6 +49,8 @@ client.on('message', (channel, tags, message) => {
     const lastTime = lastBotMessageTimeMap[channel] || 0;
     const onCooldown = now - lastTime < COOLDOWN_MS;
 
+    let channelName = channel.replace("#", "") // Removes the '#' from the username
+
     // Check if username detection is on cooldown for this channel
     const usernameCooldownActive = usernameDetectionCooldownMap[channel] && (now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS);
 
@@ -51,21 +58,21 @@ client.on('message', (channel, tags, message) => {
     const usernameMentioned = message.toLowerCase().includes(process.env.TWITCH_USERNAME.toLowerCase());
     if (usernameMentioned && !usernameCooldownActive) {
         // Log the mention to a channel specific txt file
-        fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, `USERNAME MENTIONED AT https://www.twitch.tv/${channel.replace("#", "")} - ` + message + `\n`, (err) => {
+        fs.appendFile(`messages/${channelName}_messages.txt`, `USERNAME MENTIONED AT https://www.twitch.tv/${channelName} - ` + message + `\n`, (err) => {
             if (err) throw err;
         });
 
         notifier.notify(
             {
                 title: `USERNAME DETECTED`,
-                message: `Channel: ${channel.replace("#", "")}\nMessage: ${message}`,
+                message: `Channel: ${channelName}\nMessage: ${message}`,
                 icon: iconPath,
                 wait: true,
             }
         )
 
         notifier.once('click', () => {
-            require('child_process').exec(`start https://www.twitch.tv/${channel.replace('#', '')}`)
+            require('child_process').exec(`start https://www.twitch.tv/${channelName}`)
         })
 
         // Play notification sound
@@ -97,23 +104,23 @@ client.on('message', (channel, tags, message) => {
 
     // If a message is reapeated 5 times, log it and play a notification
     if (messages.length >= 5 && allSame && !onCooldown) {
-        const logEntry = `[${new Date(now).toLocaleString()}] https://www.twitch.tv/${channel.replace("#", "")} - MSG Repeated: ${message}\n`;
+        const logEntry = `[${new Date(now).toLocaleString()}] https://www.twitch.tv/${channelName} - Message Repeated: ${message}\n`;
 
-        fs.appendFile(`messages/${channel.replace('#', '')}_messages.txt`, logEntry, (err) => {
+        fs.appendFile(`messages/${channelName}_messages.txt`, logEntry, (err) => {
             if (err) throw err;
         });
 
         notifier.notify(
             {
                 title: `Message repeated`,
-                message: `Channel: ${channel.replace("#", "")}\nMessage: ${message} has been said 5 times.`,
+                message: `Channel: ${channelName}\nMessage: ${message} has been said 5 times.`,
                 icon: iconPath,
                 wait: true,
             }
         )
 
         notifier.on('click', () => {
-            require('child_process').exec(`start https://www.twitch.tv/${channel.replace('#', '')}`)
+            require('child_process').exec(`start https://www.twitch.tv/${channelName}`)
         })
 
         player.play(soundPath, (err) => {
@@ -132,38 +139,4 @@ client.on('message', (channel, tags, message) => {
     }
 });
 
-// Check if streamer is live
-async function isStreamerLive(username) {
-    try {
-        const response = await fetch(`https://api.twitch.tv/helix/streams?user_login=${username}`, {
-            headers: {
-                'Client-ID': process.env.TWITCH_CLIENT_ID,
-                'Authorization': `Bearer ${process.env.TWITCH_OAUTH_TOKEN.replace("oauth:", "")}`
-            }
-        });
-
-        const data = await response.json();
-        return data?.data?.length > 0; // Returns true if stream is live
-    } catch (error) {
-        console.error(`Error checking ${username} status:`, error);
-        return false;
-    }
-}
-
-// Check stream every minute to see if they're live. If not, log it and disconnect bot from chat
-setInterval(async () => {
-    for (const username of channels.map(c => c.replace('#', ''))) {
-        const live = await isStreamerLive(username);
-        if (live) {
-            console.log(`${username} is LIVE!`);
-        } else {
-            fs.appendFile(`messages/${username}_messages.txt`, `${username} is offline`, (err) => {
-                if (err) throw err;
-            }); // Log offline status
-            client.part(`#${username}`); // Disconnect bot
-            player.play(soundPathDisconnect, (err) => {
-                if (err) console.error('Error playing disconnect sound:', err);
-            }); // Play notification
-        }
-    }
-}, 600000);
+streamMonitor(client);

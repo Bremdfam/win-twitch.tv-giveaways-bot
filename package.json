@@ -1,6 +1,7 @@
 {
   "name": "twitch.tv-giveaway-bot",
   "version": "1.0.0",
+  "type": "module",
   "description": "A chatbot for Twitch.tv that automates winning giveaways",
   "main": "bot.js",
   "scripts": {

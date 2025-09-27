@@ -11,7 +11,6 @@ A chatbot for Twitch.tv that automates winning giveaways
 - [x] disconnect when a streamer is offline
 - [] Have a list of different things to say when you win
     - mention steam incase the streamer needs to know what platform you're on
-- Get rid of noise notif? - need custom APPID or tell user to change their own settings
 - [] Change the cooldown so if a repeat message is detected log it and if the next message is the same within like 10 minutes then don't say it a second time. If it is not the same then say the message.
 - [] Add streamer-specific checks the user can modify
     - If a streamer does not require you to re enter giveaway

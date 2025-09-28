@@ -2,16 +2,18 @@ import 'dotenv/config'; // Load env variables
 import tmi from 'tmi.js'; // Twitch Messaging Interface
 import streamStatusMonitor from './streamStatusMonitor.js';
 import notifications from './notifications.js';
+import config from './config.js'
 
 // List of channels to track from the .env file
-const channels = process.env.CHANNELS.split(',');
+const channels = (process.env.CHANNELS || config.channels).split(',')
+const username = process.env.TWITCH_USERNAME || config.TWITCH_USERNAME
 
 // Create Twitch client
 const client = new tmi.Client({
     options: { debug: true },
     identity: {
-        username: process.env.TWITCH_USERNAME,
-        password: process.env.TWITCH_OAUTH_TOKEN
+        username: process.env.TWITCH_USERNAME || config.TWITCH_USERNAME,
+        password: process.env.TWITCH_OAUTH_TOKEN || config.TWITCH_OAUTH_TOKEN
     },
     channels: channels
 });
@@ -23,11 +25,11 @@ const lastBotMessageTimeMap = {}; // Tracks last bot message per channel
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 const usernameDetectionCooldownMap = {}; // Tracks when username was detected
 const USERNAME_COOLDOWN_MS = 30 * 1000; // 30 seconds
-const filter = ['raid', 'aimzHug', 'cahlaPrime'] // Filter out specific words
+
 
 // Event listener for incoming chat messages
 client.on('message', (channel, tags, message) => {
-    if (tags.badges?.vip || filter.some(word => message.toLowerCase().includes(word))) return; // Filter out bot, VIP, or filtered messages
+    if (tags.badges?.vip || config.filter.some(word => message.toLowerCase().includes(word))) return; // Filter out VIP and filtered messages
 
     // Track bot cooldown
     const now = Date.now();
@@ -40,12 +42,18 @@ client.on('message', (channel, tags, message) => {
     const usernameCooldownActive = usernameDetectionCooldownMap[channel] && (now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS);
 
     // Detect if your username is mentioned
-    const usernameMentioned = message.toLowerCase().includes(process.env.TWITCH_USERNAME.toLowerCase());
+    const usernameMentioned = message.toLowerCase().includes(username.toLowerCase());
     if (usernameMentioned && !usernameCooldownActive) {
         notifications("mentioned", channelName, message) // Notify user that name was mentioned
 
-        // Send a message in chat
-        // client.say(channel, "Hello")
+        // Wait 5 seconds before sending message
+        setTimeout(() => {
+            // Send a message in chat
+            // client.say(channel, "Hello")
+            const randomMessage = config.winMessages[Math.floor(Math.random() * config.winMessages.length)];
+            console.log(randomMessage)
+        }, 5000)
+
     }
 
     // Initialize message array for channel
@@ -63,8 +71,8 @@ client.on('message', (channel, tags, message) => {
 
     // Check if the last 5 messages are the same
     const lastMessage = messages[messages.length - 1];
-    const lastFive = messages.slice(-5); // Change to track how many messages need to be the same
-    const allSame = lastFive.every(msg => msg === lastMessage);
+    const lastFewMessages = messages.slice(config.duplicateMessagesInARow);
+    const allSame = lastFewMessages.every(msg => msg === lastMessage);
 
     // If a message is reapeated 5 times, log it and play a notification
     if (messages.length >= 5 && allSame && !onCooldown) {
@@ -83,4 +91,4 @@ client.on('message', (channel, tags, message) => {
     }
 });
 
-streamStatusMonitor(client);
+streamStatusMonitor(client); // Checks if stream is live

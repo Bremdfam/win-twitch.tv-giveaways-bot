@@ -35,6 +35,11 @@ export default function streamStatusMonitor(client) {
     setInterval(async () => {
         const liveStreamers = await fetchLiveStreamers(channelNames);
 
+        if (liveStreamers.length === 0) {
+            console.log("No channels are live. Exiting program.");
+            process.exit(0);
+        }
+
         for (const { channelName } of channelObjects) {
             const isLive = liveStreamers.includes(channelName.toLowerCase());
 

@@ -1,104 +1,95 @@
-import 'dotenv/config'; // Load env variables
-import tmi from 'tmi.js'; // Twitch Messaging Interface
+import 'dotenv/config';
+import tmi from 'tmi.js';
 import streamStatusMonitor from './streamStatusMonitor.js';
 import notifications from './notifications.js';
-import config from './config.js'
+import config from './config.js';
 
-// List of channels to track from the .env file
-// const channels = (process.env.CHANNELS || config.channels)
 const channelNames = config.channels.map(c => c.channelName);
-const username = process.env.TWITCH_USERNAME || config.TWITCH_USERNAME
+const username = process.env.TWITCH_USERNAME || config.TWITCH_USERNAME;
 
-// Create Twitch client
 const client = new tmi.Client({
     options: { debug: true },
     identity: {
-        username: process.env.TWITCH_USERNAME || config.TWITCH_USERNAME,
+        username,
         password: process.env.TWITCH_OAUTH_TOKEN || config.TWITCH_OAUTH_TOKEN
     },
     channels: channelNames
 });
 
-client.connect(); // Connect to Twitch chat
+client.connect();
 
-const messageMap = {}; // Stores messages per channel
-const lastBotMessageTimeMap = {}; // Tracks last bot message per channel
-const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
-const usernameDetectionCooldownMap = {}; // Tracks when username was detected
-const USERNAME_COOLDOWN_MS = 30 * 1000; // 30 seconds
+const messageMap = {};
+const lastBotMessageTimeMap = {};
+const usernameDetectionCooldownMap = {};
 
-// Event listener for incoming chat messages
+const COOLDOWN_MS = 10 * 60 * 1000;
+const USERNAME_COOLDOWN_MS = 30 * 1000;
+
 client.on('message', (channel, tags, message) => {
-    // Define Filters
+    const now = Date.now();
     const channelName = channel.replace("#", "");
     const channelConfig = config.channels.find(c => c.channelName === channelName);
-    const filtersForChannel = [
-        ...(config.globalFilters || []),
-        ...(channelConfig?.filters || [])
-    ];
+    if (!channelConfig) return;
 
-    const isFiltered = filtersForChannel.some(word =>
+    const filters = [...(config.globalFilters || []), ...(channelConfig.filters || [])];
+    const isFiltered = filters.some(word =>
         message.toLowerCase().includes(word.toLowerCase())
     );
-    if (tags.badges?.vip || isFiltered) return; // Filter out VIP and filtered messages
 
-    // Track bot cooldown
-    const now = Date.now();
-    const lastTime = lastBotMessageTimeMap[channel] || 0;
-    const onCooldown = now - lastTime < COOLDOWN_MS;
+    if (tags.badges?.vip || isFiltered) return;
 
+    const onCooldown = now - (lastBotMessageTimeMap[channel] || 0) < COOLDOWN_MS;
+    const usernameCooldownActive =
+        usernameDetectionCooldownMap[channel] &&
+        now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS;
 
-    // Check if username detection is on cooldown for this channel
-    const usernameCooldownActive = usernameDetectionCooldownMap[channel] && (now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS);
-
-    // Detect if your username is mentioned
     const usernameMentioned = message.toLowerCase().includes(username.toLowerCase());
     if (usernameMentioned && !usernameCooldownActive) {
-        notifications("mentioned", channelName, message) // Notify user that name was mentioned
+        notifications("mentioned", channelName, message);
+        usernameDetectionCooldownMap[channel] = now;
 
-        // Wait 5 seconds before sending message
         setTimeout(() => {
-            // Send a message in chat
-            // client.say(channel, "Hello")
-            const randomMessage = config.winMessages[Math.floor(Math.random() * config.winMessages.length)];
-            console.log(randomMessage)
-        }, 5000)
-
+            const randomMessage =
+                config.winMessages[Math.floor(Math.random() * config.winMessages.length)];
+            console.log(`[${channelName}] Win message: ${randomMessage}`);
+            // Send win message in chat
+            if (config.automaticallySendWinMessage == true) {
+                client.say(channel, randomMessage);
+            }
+        }, 5000);
     }
 
-    // Initialize message array for channel
+    // Track messages with sender info
     if (!messageMap[channel]) messageMap[channel] = [];
     const messages = messageMap[channel];
 
-    // Add non-mod messages to message array
     if (!tags.mod) {
-        messages.push(message);
+        messages.push({ text: message, user: tags.username });
     }
 
-    if (messages.length > channelConfig.duplicateMessagesInARow) messages.shift(); // Remove older messages
+    const threshold = channelConfig.duplicateMessagesInARow || 3;
+    messageMap[channel] = messages.slice(-threshold);
 
-    console.log(`Messages for ${channel}:`, messages); // Log the current message array for this channel
+    const lastFew = messageMap[channel];
+    if (lastFew.length < threshold) return;
 
-    // Check if messages are the same
-    const lastMessage = messages[messages.length - 1];
-    const lastFewMessages = messages.slice(-channelConfig.duplicateMessagesInARow);
-    const allSame = lastFewMessages.every(msg => msg === lastMessage);
+    const firstText = lastFew[0].text;
+    const allSameText = lastFew.every(msg => msg.text === firstText);
+    const uniqueUsers = new Set(lastFew.map(msg => msg.user));
+    const multipleUsers = uniqueUsers.size > 1;
 
-    // If a message is reapeated, log it and play a notification
-    if (messages.length >= channelConfig.duplicateMessagesInARow && allSame && !onCooldown) {
-
-        notifications("message", channelName, message)
-
-        // Send the repeated message
-        // client.say(channel, message)
-
-        lastBotMessageTimeMap[channel] = now; // Update bot cooldown for channel
-        usernameDetectionCooldownMap[channel] = now; // Update username detection
+    if (allSameText && multipleUsers && !onCooldown) {
+        notifications("message", channelName, firstText);
+        lastBotMessageTimeMap[channel] = now;
+        // Send message to enter giveaway in chat
+        if (config.automaticallyJoinGiveaway == true) {
+            client.say(channel, randomMessage);
+        }
     } else if (onCooldown) {
-        console.log(`[${channel}] On cooldown`);
+        console.log(`[${channelName}] On cooldown`);
     } else {
-        console.log(`[${channel}] Messages not repeated`);
+        console.log(`[${channelName}] Messages not repeated or from same user`);
     }
 });
 
-streamStatusMonitor(client); // Checks if stream is live
+streamStatusMonitor(client);

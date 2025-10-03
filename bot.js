@@ -5,7 +5,8 @@ import notifications from './notifications.js';
 import config from './config.js'
 
 // List of channels to track from the .env file
-const channels = (process.env.CHANNELS || config.channels).split(',')
+// const channels = (process.env.CHANNELS || config.channels)
+const channelNames = config.channels.map(c => c.channelName);
 const username = process.env.TWITCH_USERNAME || config.TWITCH_USERNAME
 
 // Create Twitch client
@@ -15,7 +16,7 @@ const client = new tmi.Client({
         username: process.env.TWITCH_USERNAME || config.TWITCH_USERNAME,
         password: process.env.TWITCH_OAUTH_TOKEN || config.TWITCH_OAUTH_TOKEN
     },
-    channels: channels
+    channels: channelNames
 });
 
 client.connect(); // Connect to Twitch chat
@@ -26,17 +27,26 @@ const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 const usernameDetectionCooldownMap = {}; // Tracks when username was detected
 const USERNAME_COOLDOWN_MS = 30 * 1000; // 30 seconds
 
-
 // Event listener for incoming chat messages
 client.on('message', (channel, tags, message) => {
-    if (tags.badges?.vip || config.filter.some(word => message.toLowerCase().includes(word))) return; // Filter out VIP and filtered messages
+    // Define Filters
+    const channelName = channel.replace("#", "");
+    const channelConfig = config.channels.find(c => c.channelName === channelName);
+    const filtersForChannel = [
+        ...(config.globalFilters || []),
+        ...(channelConfig?.filters || [])
+    ];
+
+    const isFiltered = filtersForChannel.some(word =>
+        message.toLowerCase().includes(word.toLowerCase())
+    );
+    if (tags.badges?.vip || isFiltered) return; // Filter out VIP and filtered messages
 
     // Track bot cooldown
     const now = Date.now();
     const lastTime = lastBotMessageTimeMap[channel] || 0;
     const onCooldown = now - lastTime < COOLDOWN_MS;
 
-    let channelName = channel.replace("#", "") // Removes the '#' from the username
 
     // Check if username detection is on cooldown for this channel
     const usernameCooldownActive = usernameDetectionCooldownMap[channel] && (now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS);
@@ -65,17 +75,17 @@ client.on('message', (channel, tags, message) => {
         messages.push(message);
     }
 
-    if (messages.length > 5) messages.shift(); // Remove any message older than the last 5 from the array
+    if (messages.length > channelConfig.duplicateMessagesInARow) messages.shift(); // Remove older messages
 
     console.log(`Messages for ${channel}:`, messages); // Log the current message array for this channel
 
-    // Check if the last 5 messages are the same
+    // Check if messages are the same
     const lastMessage = messages[messages.length - 1];
-    const lastFewMessages = messages.slice(config.duplicateMessagesInARow);
+    const lastFewMessages = messages.slice(-channelConfig.duplicateMessagesInARow);
     const allSame = lastFewMessages.every(msg => msg === lastMessage);
 
-    // If a message is reapeated 5 times, log it and play a notification
-    if (messages.length >= 5 && allSame && !onCooldown) {
+    // If a message is reapeated, log it and play a notification
+    if (messages.length >= channelConfig.duplicateMessagesInARow && allSame && !onCooldown) {
 
         notifications("message", channelName, message)
 

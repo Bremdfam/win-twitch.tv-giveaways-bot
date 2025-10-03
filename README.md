@@ -7,7 +7,5 @@ A chatbot for Twitch.tv that automates winning giveaways
 - [] Add streamer-specific checks the user can modify
     - If a streamer does not require you to re enter giveaway
     - If re-entering makes you leave the giveaway
-    - Different splice options to detect duplicate words in smaller chats
-    - specific words to filter out (like !join for dbd queues)
 - [] Refine README
 - [] See if you can automatically search twitch titles and categories for !giveaway

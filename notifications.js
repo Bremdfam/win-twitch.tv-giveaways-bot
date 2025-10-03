@@ -32,7 +32,7 @@ export default function notifications(notif, channelName, message) {
             notifier.notify(
                 {
                     title: `Message repeated`,
-                    message: `Channel: ${channelName}\nMessage: ${message} has been said 5 times.`,
+                    message: `Channel: ${channelName}\nMessage: ${message} has been repeated.`,
                     icon: iconPath,
                     wait: true,
                 }

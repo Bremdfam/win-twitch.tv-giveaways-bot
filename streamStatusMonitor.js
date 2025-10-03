@@ -3,7 +3,8 @@ import fetch from 'node-fetch';
 import notifications from './notifications.js';
 import config from './config.js';
 
-const channels = (process.env.CHANNELS || config.channels).split(',').map(c => c.replace('#', ''));
+const channelObjects = config.channels;
+const channelNames = channelObjects.map(c => c.channelName);
 const disconnectedChannels = new Set();
 
 export default function streamStatusMonitor(client) {
@@ -32,23 +33,23 @@ export default function streamStatusMonitor(client) {
     }
 
     setInterval(async () => {
-        const liveStreamers = await fetchLiveStreamers(channels);
+        const liveStreamers = await fetchLiveStreamers(channelNames);
 
-        for (const username of channels) {
-            const isLive = liveStreamers.includes(username.toLowerCase());
+        for (const { channelName } of channelObjects) {
+            const isLive = liveStreamers.includes(channelName.toLowerCase());
 
             if (isLive) {
-                console.log(`${username} is LIVE!`);
-                disconnectedChannels.delete(username);
-            } else if (!disconnectedChannels.has(username)) {
-                disconnectedChannels.add(username);
-                notifications("offline", username);
+                console.log(`${channelName} is LIVE!`);
+                disconnectedChannels.delete(channelName);
+            } else if (!disconnectedChannels.has(channelName)) {
+                disconnectedChannels.add(channelName);
+                notifications("offline", channelName);
 
                 try {
-                    await client.part(`#${username}`);
-                    console.log(`Disconnected from ${username}`);
+                    await client.part(`#${channelName}`);
+                    console.log(`Disconnected from ${channelName}`);
                 } catch (err) {
-                    console.error(`Error disconnecting from ${username}:`, err.message);
+                    console.error(`Error disconnecting from ${channelName}:`, err.message);
                 }
             }
         }

@@ -19,8 +19,9 @@ const globalFilters = ["raid"] // Filters for all channels
 const automaticallyJoinGiveaway = true; // Auto joins giveaway
 const automaticallySendWinMessage = true; // Auto sends win message
 const winMessages = ['YOOOOO', "I'm here!", "I won!"]; // Messages to say when you win
+const notifyWhenStreamGoesOffline = true; // Notifies you when a stream goes offline
 
 export default {
     TWITCH_CLIENT_ID, TWITCH_OAUTH_TOKEN, TWITCH_USERNAME,
-    channels, globalFilters, winMessages, automaticallyJoinGiveaway, automaticallySendWinMessage
+    channels, globalFilters, winMessages, automaticallyJoinGiveaway, automaticallySendWinMessage, notifyWhenStreamGoesOffline
 };

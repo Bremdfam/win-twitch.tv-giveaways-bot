@@ -12,17 +12,21 @@ export default function notifications(notif, channelName, message) {
 
     switch (notif) {
         case "offline":
-            fs.appendFile(`logs/${channelName}_messages.txt`, `[${timeStamp}]  ${channelName} is offline\n`, (err) => {
-                if (err) throw err;
+            return new Promise((resolve, reject) => {
+                fs.appendFile(`logs/${channelName}_messages.txt`, `[${timeStamp}]  ${channelName} is offline\n`, (err) => {
+                    if (err) return reject(err);
+
+                    if (config.notifyWhenStreamGoesOffline === true) {
+                        notifier.notify({
+                            title: `${channelName} is offline`,
+                            message: "Disconnecting from stream",
+                            icon: iconPath,
+                        }, () => resolve());
+                    } else {
+                        resolve();
+                    }
+                });
             });
-            if (config.notifyWhenStreamGoesOffline == true) {
-                notifier.notify({
-                    title: `${channelName} is offline`,
-                    message: "Disconnecting from stream",
-                    icon: iconPath,
-                })
-            }
-            break;
         case "message":
             fs.appendFile(`logs/${channelName}_messages.txt`, `[${timeStamp}] https://www.twitch.tv/${channelName} - Message Repeated: ${message}\n`, (err) => {
                 if (err) throw err;
@@ -59,5 +63,7 @@ export default function notifications(notif, channelName, message) {
                 require('child_process').exec(`start https://www.twitch.tv/${channelName}`)
             })
             break;
+        default:
+            return Promise.resolve();
     }
 }

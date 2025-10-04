@@ -35,6 +35,7 @@ export default function streamStatusMonitor(client) {
     setInterval(async () => {
         const liveStreamers = await fetchLiveStreamers(channelNames);
         let allChannelsIsOffline = true;
+        const offlineNotificationPromises = [];
 
         for (const { channelName } of channelObjects) {
             const isLive = liveStreamers.includes(channelName.toLowerCase());
@@ -44,7 +45,7 @@ export default function streamStatusMonitor(client) {
                 allChannelsIsOffline = false;
             } else if (!disconnectedChannels.has(channelName)) {
                 disconnectedChannels.add(channelName);
-                notifications("offline", channelName);
+                offlineNotificationPromises.push(notifications("offline", channelName));
 
                 try {
                     await client.part(`#${channelName}`);
@@ -56,8 +57,14 @@ export default function streamStatusMonitor(client) {
         }
 
         if (allChannelsIsOffline) {
-            console.log("No channels are live. Exiting program.");
-            process.exit(0);
+            try {
+                await Promise.all(offlineNotificationPromises);
+                console.log("No channels are live. Exiting program.");
+                process.exit(0);
+            } catch (err) {
+                console.error("Error during offline notifications:", err.message);
+                process.exit(1);
+            }
         }
     }, 60000); // Check every 60 seconds
 }

@@ -22,8 +22,8 @@ const messageMap = {};
 const lastBotMessageTimeMap = {};
 const usernameDetectionCooldownMap = {};
 
-const COOLDOWN_MS = 10 * 60 * 1000;
-const USERNAME_COOLDOWN_MS = 30 * 1000;
+const COOLDOWN_MS = config.joinGiveawayCooldown * 60 * 1000;
+const USERNAME_COOLDOWN_MS = config.usernameDetectionCooldown * 1000;
 
 client.on('message', (channel, tags, message) => {
     const now = Date.now();
@@ -51,7 +51,6 @@ client.on('message', (channel, tags, message) => {
         setTimeout(() => {
             const randomMessage =
                 config.winMessages[Math.floor(Math.random() * config.winMessages.length)];
-            console.log(`[${channelName}] Win message: ${randomMessage}`);
             // Send win message in chat
             if (config.automaticallySendWinMessage == true) {
                 client.say(channel, randomMessage);
@@ -67,7 +66,7 @@ client.on('message', (channel, tags, message) => {
         messages.push({ text: message, user: tags.username });
     }
 
-    const threshold = channelConfig.duplicateMessagesInARow || 3;
+    const threshold = channelConfig.duplicateMessagesInARow || 10;
     messageMap[channel] = messages.slice(-threshold);
 
     const lastFew = messageMap[channel];
@@ -81,9 +80,10 @@ client.on('message', (channel, tags, message) => {
     if (allSameText && multipleUsers && !onCooldown) {
         notifications("message", channelName, firstText);
         lastBotMessageTimeMap[channel] = now;
+        usernameDetectionCooldownMap[channel] = now;
         // Send message to enter giveaway in chat
         if (config.automaticallyJoinGiveaway == true) {
-            client.say(channel, randomMessage);
+            client.say(channel, message);
         }
     } else if (onCooldown) {
         console.log(`[${channelName}] On cooldown`);

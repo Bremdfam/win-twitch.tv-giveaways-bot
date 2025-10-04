@@ -34,18 +34,14 @@ export default function streamStatusMonitor(client) {
 
     setInterval(async () => {
         const liveStreamers = await fetchLiveStreamers(channelNames);
-
-        if (liveStreamers.length === 0) {
-            console.log("No channels are live. Exiting program.");
-            process.exit(0);
-        }
+        let allChannelsIsOffline = true;
 
         for (const { channelName } of channelObjects) {
             const isLive = liveStreamers.includes(channelName.toLowerCase());
 
             if (isLive) {
-                console.log(`${channelName} is LIVE!`);
                 disconnectedChannels.delete(channelName);
+                allChannelsIsOffline = false;
             } else if (!disconnectedChannels.has(channelName)) {
                 disconnectedChannels.add(channelName);
                 notifications("offline", channelName);
@@ -57,6 +53,11 @@ export default function streamStatusMonitor(client) {
                     console.error(`Error disconnecting from ${channelName}:`, err.message);
                 }
             }
+        }
+
+        if (allChannelsIsOffline) {
+            console.log("No channels are live. Exiting program.");
+            process.exit(0);
         }
     }, 60000); // Check every 60 seconds
 }

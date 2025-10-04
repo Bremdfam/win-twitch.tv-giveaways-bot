@@ -1,4 +1,4 @@
-# Win-Twitch.tv-Giveaways-Bot
+# Win Twitch.tv Giveaways Bot
 A configurable chatbot for Twitch.tv that automates winning giveaways by detecting repeated messages, username mentions, and stream status changes.
 
 ## Features

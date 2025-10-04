@@ -13,7 +13,7 @@ A configurable chatbot for Twitch.tv that automates winning giveaways by detecti
 
 ## How to Install
 
-1. Install NodeJs
+1. Install Node.Js
     - You can install NodeJs from their website [here](https://nodejs.org/en/download).
 
 2. Clone the repository
@@ -83,18 +83,18 @@ const TWITCH_CLIENT_ID = "1o8d1qx2y9vcvtthnou9x6qpn0m8b5"
 ```
 #### Note:
 1. Sometimes your Twitch Access Token will include the prefix `oauth:`. Make sure to copy the **entire token**, including the prefix, into your `TWITCH_OAUTH_TOKEN` field: `TWITCH_OAUTH_TOKEN = "oauth:w4df5g1abgn1o2erg4ghfihp9n0owv"`
-2. **You should not share these tokens publicly!** The ones shown are examples meant to represent what the tokens may look like. If you're saving your project to GitHub or working in a shared environment, use a `.env` file to keep your credentials secure. You can copy the structure from `.env.example` and insert your actual tokens there. Use .gitignore to stop github from uploading your tokens.
+2. **You should not share these tokens publicly!** The ones shown are examples meant to represent what the tokens may look like. If you're saving your project to GitHub or working in a shared environment, use a `.env` file to keep your credentials secure. You can copy the structure from `.env.example` and insert your actual tokens there. Use .gitignore to stop Github from uploading your tokens.
 
-### Channel Specific Configs
+### Per-Channel Configs
 - `channelName:`
     - The name of the stream you want to track.
-    - You can find a streamers name at the end of the twitch url e.g. https://www.twitch.tv/kaicenat.
+    - You can find a streamer's name at the end of the Twitch URL e.g. https://www.twitch.tv/kaicenat.
 - `filters:`
     - Add specific words or phrases you do not want the bot to say.
     - Leave empty to not have a specific filter.
-    - Mainly used to filter out non-giveaway releated spam. For example, some streamers like to play games with their chatters. To join they have them type something like "!play". If you do not filter out !play the bot will say it in chat and you will join the streamer's queue.
+    - Mainly used to filter out non-giveaway related spam. For example, some streamers like to play games with their chatters. To join they have them type something like "!play". If you do not filter out !play the bot will say it in chat and you will join the streamer's queue.
 - `duplicateMessagesInARow:`
-    - Determines how many duplicate messages need to be said in a row before the bot repeates it.
+    - Determines how many duplicate messages need to be said in a row before the bot repeats it.
     - For larger streams of 100+ I would recommend at least 10. For smaller streams you can change it to ~5.
 ```js
 // Channels to monitor and channel specific configs
@@ -114,7 +114,7 @@ const channels = [
 #### Note:
 Do not leave `channelName` or `duplicateMessagesInARow` blank or at 0. If you only want to track one channel then you should only have one object in the array.
 
-### General Configs
+### Global Configs
 - `globalFilters`
     - Is a global filter for all channels.
     - Has "raid" by default to prevent the bot from repeating raid messages.
@@ -171,7 +171,7 @@ node src/bot.js
 ### Bot Behavioral Warnings
 1. Any time your username is mentioned when not on cooldown a message will be sent if automaticallySendWinMessage is true. Be sure to toggle that off if you plan to talk in chat so people can @ you without triggering the bot message.
 
-2. The bot detects if a message contains your username. However, if someone has the same name as you but slightly different then it will still trigger the bot detection system. Foe example, if your name is bremdfam and another user is called Imbremdfam1234, the bot will think your name is mentioned and send the win message and notification. This will be fixed soon.
+2. The bot detects if a message contains your username. However, if someone has the same name as you but slightly different then it will trigger the bot detection system. For example, if your name is bremdfam and another user is called Imbremdfam1234, the bot will think your name is mentioned and send the win message and notification. This will be fixed soon.
 
 3. I do not know Twitch TOS but I imagine this breaks a rule somewhere and could get you banned `¯\_(ツ)_/¯`. Use at your own risk.
 

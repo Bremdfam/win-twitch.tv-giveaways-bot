@@ -60,7 +60,7 @@ const winMessages = ['YOOOOO', "Yippee :)", "PogChamp PogChamp PogChamp"]; // Me
 const notifyWhenStreamGoesOffline = true; // Notifies you when a stream goes offline
 ```
 ### How to Get Your Twitch Credentials
-1. To generate your Twitch credentials, use the **[Twitch Token Generator](https://twitchtokengenerator.com/)** by swiftyspiffy:
+1. To generate your Twitch credentials, use the **[Twitch Token Generator](https://twitchtokengenerator.com/)** by swiftyspiffy.
 
 2. Scroll down to the **Available Token Scopes** section.
 

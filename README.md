@@ -30,7 +30,7 @@ A configurable chatbot for Twitch.tv that automates winning giveaways by detecti
     ```
 
 ## How to Configure
-### Navigate to src/config.js
+### Open src/config.js
 ```js
 // Twitch credentials
 const TWITCH_USERNAME = "YOUR USERNAME"
@@ -88,7 +88,7 @@ const TWITCH_CLIENT_ID = "1o8d1qx2y9vcvtthnou9x6qpn0m8b5"
 ### Channel Specific Configs
 - `channelName:`
     - The name of the stream you want to track.
-    - You can find a streamers name at the end of the twitch url e.g. https://www.twitch.tv/`kaicenat`.
+    - You can find a streamers name at the end of the twitch url e.g. https://www.twitch.tv/kaicenat.
 - `filters:`
     - Add specific words or phrases you do not want the bot to say.
     - Leave empty to not have a specific filter.
@@ -118,49 +118,49 @@ Do not leave `channelName` or `duplicateMessagesInARow` blank or at 0. If you on
 - `globalFilters`
     - Is a global filter for all channels.
     - Has "raid" by default to prevent the bot from repeating raid messages.
-    ```js
-    const globalFilters = ["raid"] // Filters for all channels
-    ```
+```js
+const globalFilters = ["raid"] // Filters for all channels
+```
 
 - `automaticallyJoinGiveaway`
     - Automatically sends the duplicate message in chat.
     - If set to false the bot will not send a message in chat. You will still be notified if a duplicate message is repeated.
-    ```js
-    const automaticallyJoinGiveaway = true; // Auto joins giveaway
-    ```
+```js
+const automaticallyJoinGiveaway = true; // Auto joins giveaway
+```
 
 - `automaticallySendWinMessage`
     - Automatically sends a win message when your username is detected.
     - If set to false the bot will not send a message in chat. You will still be notified if your username is repeated.
-    ```js
-    const automaticallySendWinMessage = true; // Auto sends win message
-    ```
+```js
+const automaticallySendWinMessage = true; // Auto sends win message
+```
 
 - `joinGiveawayCooldown`
     - The amount of time in **minutes** before the bot can send another duplicate message in the same chat.
-    - Prevents spamming the chat with bot messages within this time frame.
-    ```js
-    const joinGiveawayCooldown = 15; // Amount of time in MINUTES before you can enter the same stream's giveaway
-    ```
+    - Prevents spamming duplicate messages in the chat within this time frame.
+```js
+const joinGiveawayCooldown = 15; // Amount of time in MINUTES before you can enter the same stream's giveaway
+```
 
 - `usernameDetectionCooldown`
     - The amount of time in **seconds** your username will not be detected after entering a giveaway or when your username is mentioned.
-    - Some streamers setup the giveaway to have a bot say "@username has entered the giveaway!" when you enter. This setting prevents the bot from sending a message notifying you if your username is said within the configured time.
-    ```js
-    const usernameDetectionCooldown = 30; // Amount of time in SECONDS your username will not be detected after entering a giveaway
-    ```
+    - Prevents the bot from spamming win messages when your username is mentioned.
+```js
+const usernameDetectionCooldown = 30; // Amount of time in SECONDS your username will not be detected after entering a giveaway
+```
 
 - `winMessages`
     - A list of randomly selected words or phrases the bot can say when your username is mentioned.
-    ```js
-    const winMessages = ["YOOOOO", "Yippee :)", "PogChamp PogChamp PogChamp"]; // Messages to say when you win
-    ```
+```js
+const winMessages = ["YOOOOO", "Yippee :)", "PogChamp PogChamp PogChamp"]; // Messages to say when you win
+```
 
 - `notifyWhenStreamGoesOffline`
     - Notifies you when a streamer goes offline.
-    ```js
-    const notifyWhenStreamGoesOffline = true; // Notifies you when a stream goes offline
-    ```
+```js
+const notifyWhenStreamGoesOffline = true; // Notifies you when a stream goes offline
+```
 ---
 ### Run the Bot
 Type the following code while in your win-twitch.tv-giveaways-bot directory:

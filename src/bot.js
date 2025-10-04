@@ -43,19 +43,19 @@ client.on('message', (channel, tags, message) => {
         usernameDetectionCooldownMap[channel] &&
         now - usernameDetectionCooldownMap[channel] < USERNAME_COOLDOWN_MS;
 
-    const usernameMentioned = message.toLowerCase().includes(username.toLowerCase());
+    const usernameRegex = new RegExp(`(^|\\s)@?${username}\\b`, 'i');
+    const usernameMentioned = usernameRegex.test(message);
+
     if (usernameMentioned && !usernameCooldownActive) {
         notifications("mentioned", channelName, message);
         usernameDetectionCooldownMap[channel] = now;
 
-        setTimeout(() => {
-            const randomMessage =
-                config.winMessages[Math.floor(Math.random() * config.winMessages.length)];
-            // Send win message in chat
-            if (config.automaticallySendWinMessage == true) {
+        if (config.automaticallySendWinMessage === true) {
+            setTimeout(() => {
+                const randomMessage = config.winMessages[Math.floor(Math.random() * config.winMessages.length)];
                 client.say(channel, randomMessage);
-            }
-        }, 5000);
+            }, 5000);
+        }
     }
 
     // Track messages with sender info

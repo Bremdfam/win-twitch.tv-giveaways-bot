@@ -171,9 +171,7 @@ node src/bot.js
 ### Bot Behavioral Warnings
 1. Any time your username is mentioned when not on cooldown a message will be sent if automaticallySendWinMessage is true. Be sure to toggle that off if you plan to talk in chat so people can @ you without triggering the bot message.
 
-2. The bot detects if a message contains your username. However, if someone has the same name as you but slightly different then it will trigger the bot detection system. For example, if your name is bremdfam and another user is called Imbremdfam1234, the bot will think your name is mentioned and send the win message and notification. This will be fixed soon.
+2. I do not know Twitch TOS but I imagine this breaks a rule somewhere and could get you banned `¯\_(ツ)_/¯`. Use at your own risk.
 
-3. I do not know Twitch TOS but I imagine this breaks a rule somewhere and could get you banned `¯\_(ツ)_/¯`. Use at your own risk.
-
-4. If a chat is on follower/subs only mode and you are not one of those then the bot will not be able to send a message.
+3. If a chat is on follower/subs only mode and you are not one of those then the bot will not be able to send a message.
 

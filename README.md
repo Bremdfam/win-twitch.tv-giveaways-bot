@@ -163,6 +163,7 @@ const notifyWhenStreamGoesOffline = true; // Notifies you when a stream goes off
 ```
 ---
 ### Run the Bot
+Save the modified config file and your .env(if you created one).
 Type the following code while in your win-twitch.tv-giveaways-bot directory:
 ```bash
 node src/bot.js

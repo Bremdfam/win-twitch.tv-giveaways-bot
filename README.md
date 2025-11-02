@@ -171,7 +171,7 @@ node src/bot.js
 ```
 ---
 ### Bot Behavioral Warnings
-1. Any time your username is mentioned when not on cooldown a message will be sent if automaticallySendWinMessage is true. Be sure to toggle that off if you plan to talk in chat so people can @ you without triggering the bot message.
+1. Any time your username is mentioned when not on cooldown, a message will be sent if automaticallySendWinMessage is true. Toggle that off if you plan to talk in chat so people can @ you without triggering bot messages.
 
 2. I do not know Twitch TOS but I imagine this breaks a rule somewhere and could get you banned `¯\_(ツ)_/¯`. Use at your own risk.
 
